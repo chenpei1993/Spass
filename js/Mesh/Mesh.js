@@ -8,7 +8,6 @@ export default class Mesh {
         this._material = material
         this._transfrom = new Matrix4()
         this._uniforms = {}
-
         this.init()
     }
 
@@ -20,6 +19,9 @@ export default class Mesh {
         //..|..........|..........|..........|..
         //......................................
         Spass.gl.useProgram(this._material.program)
+        // Spass.gl.bindAttribLocation(this._material.program, 1, "a_position")
+        // Spass.gl.bindAttribLocation(this._material.program, 2, "a_uv")
+        //
         this._id = Spass.gl.createVertexArray()
         Spass.gl.bindVertexArray(this._id)
         if(OUtil.isNotBlank(this._geometry.vertex)){
@@ -69,6 +71,12 @@ export default class Mesh {
     _setUniform(obj){
 
         switch (obj.type){
+            case "vec3":
+                Spass.gl.uniform3fv(obj.location, obj.value)
+                break
+            case "vec4":
+                Spass.gl.uniform4fv(obj.location, obj.value)
+                break
             case "mat4":
                 Spass.gl.uniformMatrix4fv(obj.location,false, obj.value)
                 break
@@ -93,6 +101,9 @@ export default class Mesh {
 
         Spass.gl.useProgram(this._material.program)
         Spass.gl.bindVertexArray(this._id)
+
+        Spass.gl.enable(Spass.gl.CULL_FACE)
+        // Spass.gl.enable(Spass.gl.BLEND)
 
         this.setUniform("uModelViewMatrix", "mat4",  new Float32Array(this._transfrom.value))
         this.setUniform("uCameraViewMatrix", "mat4", new Float32Array(viewMatrix))
