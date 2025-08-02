@@ -1,0 +1,112 @@
+import Spass from "../Core/Spass.js";
+import {OUtil} from "../Util/OUtil.js";
+import {Matrix4} from "../Math.js";
+
+export default class Mesh {
+    constructor(geometry, material) {
+        this._geometry = geometry
+        this._material = material
+        this._transfrom = new Matrix4()
+        this._uniforms = {}
+
+        this.init()
+    }
+
+    init(){
+        //...........Vertex Arrays..............
+        //......................................
+        //..| Buffer 0 | Buffer 1 | Buffer 3 |..
+        //..| Buffer 4 | Buffer 5 | Buffer 6 |..
+        //..|..........|..........|..........|..
+        //......................................
+        Spass.gl.useProgram(this._material.program)
+        this._id = Spass.gl.createVertexArray()
+        Spass.gl.bindVertexArray(this._id)
+        if(OUtil.isNotBlank(this._geometry.vertex)){
+            let loc  = Spass.gl.getAttribLocation(this._material.program, "a_position")
+            let vertexBuf = Spass.gl.createBuffer()
+            Spass.gl.bindBuffer(Spass.gl.ARRAY_BUFFER, vertexBuf)
+            //https://developer.mozilla.org/zh-CN/docs/Web/API/WebGLRenderingContext/bufferData
+            Spass.gl.bufferData(Spass.gl.ARRAY_BUFFER, new Float32Array(this._geometry.vertex), Spass.gl.STATIC_DRAW)
+            // 指定Buffer中顶点的各种属性，获取方式等等
+            Spass.gl.vertexAttribPointer(loc, this._geometry.vertexLen, Spass.gl.FLOAT, false, 0, 0)
+            Spass.gl.enableVertexAttribArray(loc)
+        }
+
+        if(OUtil.isNotBlank(this._geometry.uv)){
+            let loc  = Spass.gl.getAttribLocation(this._material.program, "a_uv")
+            let uvBuf = Spass.gl.createBuffer()
+            Spass.gl.bindBuffer(Spass.gl.ARRAY_BUFFER, uvBuf)
+            Spass.gl.bufferData(Spass.gl.ARRAY_BUFFER, new Float32Array(this._geometry.uv), Spass.gl.STATIC_DRAW)
+            Spass.gl.vertexAttribPointer(loc, 2, Spass.gl.FLOAT, false, 0, 0)
+            Spass.gl.enableVertexAttribArray(loc)
+        }
+
+        if(OUtil.isNotBlank(this._geometry.index)){
+            let indexBuf = Spass.gl.createBuffer()
+            Spass.gl.bindBuffer(Spass.gl.ELEMENT_ARRAY_BUFFER, indexBuf)
+            Spass.gl.bufferData(Spass.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this._geometry.index), Spass.gl.STATIC_DRAW)
+        }
+
+        Spass.gl.bindBuffer(Spass.gl.ARRAY_BUFFER, null)
+        Spass.gl.bindVertexArray(null)
+        Spass.gl.useProgram(null)
+    }
+
+    setUniform(name, type, value){
+        if(!this._uniforms.hasOwnProperty(name)){
+            let loc = Spass.gl.getUniformLocation(this._material.program, name)
+            this._uniforms[name] = {
+                location: loc,
+                type: type,
+                value: value
+            }
+        }else{
+            this._uniforms[name].value = value;
+        }
+    }
+
+    _setUniform(obj){
+
+        switch (obj.type){
+            case "mat4":
+                Spass.gl.uniformMatrix4fv(obj.location,false, obj.value)
+                break
+            default:
+                console.error("obj.type not found ", obj)
+        }
+    }
+
+    setPosition(x, y, z){
+        Matrix4.translate(this._transfrom.value, x, y, z)
+    }
+
+    rotateX(rad){
+        Matrix4.rotateX(this._transfrom.value, rad)
+    }
+
+    rotateY(rad){
+        Matrix4.rotateY(this._transfrom.value, rad)
+    }
+
+    draw(viewMatrix, projectionMatrix){
+
+        Spass.gl.useProgram(this._material.program)
+        Spass.gl.bindVertexArray(this._id)
+
+        this.setUniform("uModelViewMatrix", "mat4",  new Float32Array(this._transfrom.value))
+        this.setUniform("uCameraViewMatrix", "mat4", new Float32Array(viewMatrix))
+        this.setUniform("uProjectViewMatrix", "mat4", new Float32Array(projectionMatrix))
+        Object.values(this._uniforms).forEach(value => {
+            this._setUniform(value)
+        })
+        if(OUtil.isNotBlank(this._geometry.indexCount)){
+            Spass.gl.drawElements(this._geometry.mode, this._geometry.indexCount, Spass.gl.UNSIGNED_SHORT, 0)
+        }else{
+            Spass.gl.drawArrays(this._geometry.mode, 0, this._geometry.vertexCount)
+        }
+
+        Spass.gl.bindVertexArray(null)
+        Spass.gl.useProgram(null)
+    }
+}
