@@ -1,14 +1,22 @@
 import Spass from "../Core/Spass.js";
+import {OUtil} from "../Util/OUtil.js";
 
-export default class Shader{
+export default class FeedbackShader{
 
-    constructor(vertexShader, fragmentShader) {
+    constructor(vertexShader, fragmentShader, varyings) {
+        this._varyings = []
+
+        if(OUtil.isNotBlank(varyings)){
+            this._varyings.push(...varyings)
+        }
         this._program = this.createShader(vertexShader, fragmentShader)
+
     }
 
     get program(){
         return this._program
     }
+
 
     createShader(vertexShaderSrc, fragmentShaderSrc){
         let vertexShader = Spass.gl.createShader(Spass.gl.VERTEX_SHADER)
@@ -33,6 +41,10 @@ export default class Shader{
         const program = Spass.gl.createProgram()
         Spass.gl.attachShader(program, vertexShader)
         Spass.gl.attachShader(program, fragmentShader)
+
+        if(this._varyings.length > 0){
+            Spass.gl.transformFeedbackVaryings(program, this._varyings, Spass.gl.SEPARATE_ATTRIBS)
+        }
 
         Spass.gl.linkProgram(program)
         if(!Spass.gl.getProgramParameter(program, Spass.gl.LINK_STATUS)){
