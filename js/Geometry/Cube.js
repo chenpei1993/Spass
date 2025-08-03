@@ -46,7 +46,6 @@ export  class FacedCube{
         //Starting bottom left corner, then working counter clockwise to create the front face.
         //Backface is the first face but in reverse (3,2,1,0)
         //keep each quad face built the same way to make index and uv easier to assign
-        console.log(x0, x1, y0, y1, z0, z1)
         this.vertex = [
             x0, y1, z1, 0,	//0 Front
             x0, y0, z1, 0,	//1

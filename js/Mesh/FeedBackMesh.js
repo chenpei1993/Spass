@@ -209,6 +209,8 @@ export default class FeedBackMesh {
         Spass.gl.enable(Spass.gl.RASTERIZER_DISCARD)
         Spass.gl.drawArrays(Spass.gl.POINTS, 0, this._count)
         Spass.gl.disable(Spass.gl.RASTERIZER_DISCARD)
+        // Spass.gl.drawArraysInstanced(Spass.gl.TRIANGLES, 0, this._count * this._geometry.vertexCount, this._count)
+
 
         Spass.gl.endTransformFeedback()
 
@@ -216,7 +218,7 @@ export default class FeedBackMesh {
         Spass.gl.bindVertexArray(null)
 
 
-        Spass.gl.bindVertexArray(this._vaos[nextBufferID])
+        Spass.gl.bindVertexArray(this._vaos[this._curID])
         Spass.gl.drawArraysInstanced(Spass.gl.TRIANGLES, 0, this._count * this._geometry.vertexCount, this._count)
 
         //
