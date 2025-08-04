@@ -1,42 +1,18 @@
 import Spass from "../Core/Spass.js";
 
-export class Quad{
-    constructor(w, h, rStart, cStart) {
-        this.createGeometry(w, h, rStart, cStart)
+export class Quad {
+    constructor(bx0,by0,bx1,by1) {
+        this.createGeometry(bx0,by0,bx1,by1)
     }
 
 
-    createGeometry(w, h, rStart, cStart,  rInc = 0.5, cInc = 0.5){
-        let vertex = []
-        let index = []
-        let uv = []
-        let total = w * h
-
-        for(let i = 0; i < total; i++){
-            let r = Math.floor(i / w)
-            let c = i % w
-
-            //TODO 先XY平面
-            vertex.push(rStart + rInc * r,  cStart + cInc * c, 0.0)
-
-            //只到倒数第二行
-            if(r < w - 1){
-                index.push(r * w + c, (r + 1) * w + c)
-                //行的最后一个, 最后一行的最后一个不需要处理
-                if(c === h - 1 && r !== w - 2){
-                    index.push((r + 1) * w + c, (r + 1) * w)
-                }
-            }
-        }
-
-        this.mode =  Spass.gl.TRIANGLE_STRIP
-        this.vertex = vertex
-        this.index = index
-        this.indexCount =  index.length
+    createGeometry(bx0 = -1, by0 = -1, bx1 = 1, by1 = 1){
+        this.mode =  Spass.gl.TRIANGLES
+        this.vertex = [ bx0,by1,0.0,  bx0,by0,0.0, bx1,by0,0.0,   bx1,by1,0.0 ]
+        this.index = [ 0,1,2 , 2,3,0]
+        this.uv = [ 0.0,0.0,   0.0,1.0,   1.0,1.0,   1.0,0.0 ]
+        this.indexCount =  this.index.length
         this.vertexLen = 3
     }
-
-
-
-
 }
+

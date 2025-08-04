@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>TransformFeedBack2</title>
+    <title>Cube</title>
 </head>
 <body>
   <canvas id = "my-canvas"></canvas>
@@ -25,31 +25,26 @@
     const app = new Spass(gl)
 
     let camera = new Camera(canvasEle.width / canvasEle.height)
-    camera.position(0, 0, 100)
+    camera.position(0, 0, 10)
     app.setCamera(camera)
 
     let controller = new OrbitCameraController(camera, canvasEle)
     // out vec4 color;
 
     let vertexShaderSrc = `#version 300 es
-      layout(location = 0) in vec2 a_uv;
-      layout(location = 1) in vec4 a_offset;
+      layout(location = 0) in vec4 a_position;
+
 
       uniform vec3 uColors[6];
       uniform mat4 uModelViewMatrix;
       uniform mat4 uCameraViewMatrix;
       uniform mat4 uProjectViewMatrix;
-      uniform vec3 uPosition;
-
-      out highp vec2 v_uv;
-      out vec4 v_offset;
 
       void main(void){
-        vec4 position = a_offset + vec4(0.0, 0.0,0.0, 0.0);
-        v_offset = a_offset;
-        gl_Position =   uProjectViewMatrix  * uCameraViewMatrix * uModelViewMatrix * vec4(position.xyz, 1.0);
+
+        gl_Position =   uProjectViewMatrix  * uCameraViewMatrix * uModelViewMatrix * vec4(a_position.xyz, 1.0);
         gl_PointSize = 4.0;
-        v_uv = a_uv;
+        // color = vec4(uColors[int(a_position.w)], 1.0);
       }
     `
     // in vec4 color;
@@ -70,39 +65,18 @@
     app.scene.add(gridMesh)
 
 
-    const shader = new FeedbackShader(vertexShaderSrc, fragmentShaderSrc, ["v_uv", "v_offset"])
+    const shader = new Shader(vertexShaderSrc, fragmentShaderSrc)
     let cube = new FacedCube(0.0, 0.0, 0.0)
-    let count = 10
-    let inc = 2
-    let offsetData = []
-    for(let i = 0; i < count; i++){
-        for(let j = 0; j < count; j++){
-            for(let k = 0; k < count; k++){
-                let x = -10.0 + i * inc
-                let y = -10.0 + j * inc
-                let z = -10.0 + k * inc
-                for(let m = 0; m < cube.vertex.length; m+=4){
-                    offsetData.push(cube.vertex[m] + x, cube.vertex[m + 1] + y, cube.vertex[m + 2] + z, cube.vertex[m + 3])
-                }
-            }
-        }
-    }
-
-    let offset = {
-        name: "a_offset",
-        data: offsetData,
-        lenPerData: 4
-    }
-    cube.vertex = []
-    let cubeMesh = new FeedBackMesh(cube, shader, count * count * count, [offset])
+    cube.mode = Spass.gl.TRIANGLES
+    cube.uv = []
+    let cubeMesh = new Mesh(cube, shader)
     cubeMesh.setUniform("uColors", "vec3", new Float32Array([1.0,0.0,0.0,  0.0,1.0,0.0, 0.0,0.0,1.0, 1.0,1.0,0.0,  0.0,1.0,1.0, 0.3,0.3,0.3]))
-    cubeMesh.setUniform("uPosition", "vec3", new Float32Array([0.0,0.0,0.0]))
     app.scene.add(cubeMesh)
 
     // let geometry = new Grid(3, 3, -0.5, -0.5)
 
     // app.render()
-    app.render()
+    // app.render()
     // app.render()
     function onRender(){
         // mesh.rotateX(Math.PI * 0.02)
