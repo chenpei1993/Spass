@@ -45,6 +45,15 @@ export default class Mesh {
             Spass.gl.enableVertexAttribArray(loc)
         }
 
+        if(OUtil.isNotBlank(this._geometry.norm)){
+            let loc  = Spass.gl.getAttribLocation(this._material.program, "a_norm")
+            let normBuf = Spass.gl.createBuffer()
+            Spass.gl.bindBuffer(Spass.gl.ARRAY_BUFFER, normBuf)
+            Spass.gl.bufferData(Spass.gl.ARRAY_BUFFER, new Float32Array(this._geometry.norm), Spass.gl.STATIC_DRAW)
+            Spass.gl.vertexAttribPointer(loc, 3, Spass.gl.FLOAT, false, 0, 0)
+            Spass.gl.enableVertexAttribArray(loc)
+        }
+
         if(OUtil.isNotBlank(this._geometry.index)){
             let indexBuf = Spass.gl.createBuffer()
             Spass.gl.bindBuffer(Spass.gl.ELEMENT_ARRAY_BUFFER, indexBuf)
@@ -72,6 +81,9 @@ export default class Mesh {
 
     _setUniform(obj){
         switch (obj.type){
+            case "float":
+                Spass.gl.uniform1f(obj.location, obj.value)
+                break
             case "vec3":
                 Spass.gl.uniform3fv(obj.location, obj.value)
                 break

@@ -47,7 +47,7 @@ export default class Spass {
     }
 
     render(){
-        Spass.gl.clearColor(0, 0, 0, 1)
+        Spass.gl.clearColor(1, 1, 1, 1)
         Spass.gl.clear(  Spass.gl.COLOR_BUFFER_BIT |   Spass.gl.DEPTH_BUFFER_BIT)
 
         if(this._preRender){

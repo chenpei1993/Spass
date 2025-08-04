@@ -1,8 +1,8 @@
 import Spass from "../Core/Spass.js";
 
 export class Grid {
-    constructor(w, h, rStart, cStart) {
-        this.createGeometry(w, h, rStart, cStart)
+    constructor(w, h, rStart, cStart, rInc, cInc) {
+        this.createGeometry(w, h, rStart, cStart, rInc, cInc)
     }
 
 
@@ -17,7 +17,7 @@ export class Grid {
             let c = i % w
 
             //TODO 先XY平面
-            vertex.push(rStart + rInc * r,  cStart + cInc * c, 0.0)
+            vertex.push(cStart + cInc * c, 0.0, rStart + rInc * r)
 
             //只到倒数第二行
             if(r < w - 1){
@@ -29,10 +29,17 @@ export class Grid {
             }
         }
 
+        let norm = []
+
+        for(let i = 0;  i < total; i++){
+            norm.push(0.0, 1.0, 0.0)
+        }
+
         this.mode =  Spass.gl.TRIANGLE_STRIP
         this.vertex = vertex
         this.index = index
         this.indexCount =  index.length
         this.vertexLen = 3
+        this.norm = norm
     }
 }
