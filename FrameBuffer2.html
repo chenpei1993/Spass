@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Texture</title>
+</head>
+<body>
+<canvas id = "my-canvas"></canvas>
+<img id = "my-uv" style="display: none" src="./img/uv.jpg"></img>
+<script type="module">
+    import Camera from "./js/Camera/Camera.js";
+    import OrbitCameraController from "./js/Camera/OrbitCameraController.js";
+    import Shader from "./js/Material/Shader.js";
+    import Mesh from "./js/Mesh/Mesh.js";
+    import Spass from "./js/Core/Spass.js";
+    import {Cube, FacedCube} from "./js/Geometry/Cube.js";
+    import GridShader from "./js/Material/GridShader.js";
+    import {GridFloor} from "./js/Geometry/GridFloor.js";
+    import FrameBuffer from "./js/Core/FrameBuffer.js";
+    import {Quad} from "./js/Geometry/Quad.js";
+
+    const canvasEle = document.getElementById("my-canvas")
+    canvasEle.width = window.innerWidth
+    canvasEle.height = window.innerHeight
+    const gl = canvasEle.getContext("webgl2")
+    const app = new Spass(gl)
+
+    let camera = new Camera(canvasEle.width / canvasEle.height)
+    camera.position(0, 0, 10)
+    app.setCamera(camera)
+
+    let controller = new OrbitCameraController(camera, canvasEle)
+
+    let vertexShaderSrc = `#version 300 es
+      in vec4 a_position;
+      in vec2 a_uv;
+      uniform vec3 uColors[6];
+      uniform mat4 uModelViewMatrix;
+      uniform mat4 uCameraViewMatrix;
+      uniform mat4 uProjectViewMatrix;
+      out vec4 color;
+      out highp vec2 tex;
+      void main(void){
+        gl_Position =   uProjectViewMatrix  * uCameraViewMatrix * uModelViewMatrix * vec4(a_position.xyz, 1.0);
+        tex = a_uv;
+        color = vec4(uColors[int(a_position.w)], 1.0);
+      }
+    `
+    let fragmentShaderSrc =  `#version 300 es
+      precision mediump float;
+      in vec4 color;
+      in vec2 tex;
+      layout(location = 0) out vec4 fragColor1;
+      // layout(location = 1) out vec4 fragColor2;
+      void main(void){
+        fragColor1 = color;
+        // fragColor2 = color;
+      }
+    `
+    const gridShader = new GridShader()
+    let gridFloor = new GridFloor()
+    let gridMesh = new Mesh(gridFloor, gridShader)
+    app.scene.add(gridMesh)
+
+    const shader = new Shader(vertexShaderSrc, fragmentShaderSrc)
+    let cube = new FacedCube(0.0, 0.0, 0.0)
+    let cubeMesh = new Mesh(cube, shader)
+    cubeMesh.setUniform("uColors", "vec3", new Float32Array([1.0,0.0,0.0,  0.0,1.0,0.0, 0.0,0.0,1.0, 1.0,1.0,0.0,  0.0,1.0,1.0, 0.3,0.3,0.3]))
+    app.scene.add(cubeMesh)
+
+    app.preRender = ()=>{
+        fbo.clear()
+        fbo.enable()
+    }
+
+    app.postRender = ()=>{
+        fbo.disable()
+        fbo._quad.setTexture("uTex", fbo.texColor)
+        fbo._quad.draw()
+    }
+
+    let quad = createPixelQuad()
+    let fbo = new FrameBuffer(canvasEle.width, canvasEle.height, quad)
+
+    function onRender(){
+        app.render()
+        window.requestAnimationFrame(onRender)
+    }
+
+    window.requestAnimationFrame(onRender)
+
+
+    function createPixelQuad(){
+        let vertexShaderSrc = `#version 300 es
+      in vec4 a_position;
+      in vec2 a_uv;
+
+      out vec2 uv;
+      void main(void){
+        gl_Position =  a_position;
+        uv = a_uv;
+
+      }
+    `
+        let fragmentShaderSrc =  `#version 300 es
+      precision mediump float;
+      uniform sampler2D uTex;
+      in vec2 uv;
+      out vec4 fragColor;
+      void main(void){
+
+         ivec2 fCoord = ivec2(gl_FragCoord.xy);
+         float pixelSize = 7.0;
+         float xMod = mod(float(fCoord.x),pixelSize);
+         float yMod = mod(float(fCoord.y),pixelSize);
+         if( xMod == 0.0 || yMod == 0.0 ) {
+            fragColor = vec4(0.0,0.0,0.0,0.3);
+         }else{
+            ivec2 pix = fCoord;
+            pix.x -= int( xMod );
+            pix.y -= int( yMod );
+            fragColor = texelFetch(uTex, pix , 0);
+            // fragColor = texture(uTex, uv);
+         }
+      }
+     `
+
+        const shader = new Shader(vertexShaderSrc, fragmentShaderSrc)
+        let quad = new Quad()
+        let quadMesh = new Mesh(quad, shader)
+
+        return quadMesh
+    }
+
+
+</script>
+</body>
+</html>

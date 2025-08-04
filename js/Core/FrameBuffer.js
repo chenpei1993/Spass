@@ -36,13 +36,12 @@ function createQuad(){
 
 export default class FrameBuffer{
 
-
-    constructor(width, height) {
+    constructor(width, height, quad) {
         this._width = width
         this._height = height
 
         this.init()
-        this._quad = createQuad()
+        this._quad = quad || createQuad()
 
     }
 
