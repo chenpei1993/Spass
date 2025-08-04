@@ -1,8 +1,40 @@
 import Spass from "../Core/Spass.js";
 import {OUtil} from "../Util/OUtil.js";
 import {Matrix4} from "../Math.js";
+import Shader from "../Material/Shader.js";
+import {Quad} from "../Geometry/Quad.js";
+import Mesh from "./Mesh.js";
 
-export default class Mesh {
+
+function createQuad(){
+    let vertexShaderSrc = `#version 300 es
+      in vec4 a_position;
+      in vec2 a_uv;
+      out vec2 uv;
+      void main(void){
+        gl_Position =   a_position;
+        uv = a_uv;
+
+      }
+    `
+    let fragmentShaderSrc =  `#version 300 es
+      precision mediump float;
+      uniform sampler2D uTex;
+      in vec2 uv;
+      out vec4 fragColor;
+      void main(void){
+        fragColor = texture(uTex, vec2(uv.s, uv.t));
+      }
+     `
+
+    const shader = new Shader(vertexShaderSrc, fragmentShaderSrc)
+    let quad = new Quad()
+    let quadMesh = new Mesh(quad, shader)
+
+    return quadMesh
+}
+
+export default class FrameBufferMesh {
     constructor(geometry, material) {
         this._geometry = geometry
         this._material = material
@@ -10,6 +42,7 @@ export default class Mesh {
         this._uniforms = {}
         this._textures = {}
         this.init()
+        this.initFBO()
     }
 
     init(){
@@ -56,6 +89,55 @@ export default class Mesh {
         Spass.gl.useProgram(null)
     }
 
+    initFBO(){
+        //TODO
+        this._fragColorTexture =  Spass.gl.createTexture()
+        Spass.gl.bindTexture( Spass.gl.TEXTURE_2D, this._fragColorTexture)
+        Spass.gl.texStorage2D( Spass.gl.TEXTURE_2D, 1,  Spass.gl.RGBA8, 480, 480)
+
+        this._solidColorTexture =  Spass.gl.createTexture()
+        Spass.gl.bindTexture( Spass.gl.TEXTURE_2D, this._solidColorTexture)
+        Spass.gl.texStorage2D( Spass.gl.TEXTURE_2D, 1,  Spass.gl.RGBA8, 480, 480)
+
+        Spass.gl.bindTexture( Spass.gl.TEXTURE_2D, null)
+
+        //depth 深度
+        this._renderbuffer =  Spass.gl.createRenderbuffer()
+        Spass.gl.bindRenderbuffer( Spass.gl.RENDERBUFFER, this._renderbuffer)
+        Spass.gl.renderbufferStorage( Spass.gl.RENDERBUFFER,  Spass.gl.DEPTH_COMPONENT16, 480, 480)
+        Spass.gl.bindRenderbuffer( Spass.gl.RENDERBUFFER, null)
+
+
+        this._fbo =  Spass.gl.createFramebuffer();
+        Spass.gl.bindFramebuffer( Spass.gl.FRAMEBUFFER,  this._fbo)
+        Spass.gl.framebufferTexture2D( Spass.gl.FRAMEBUFFER,  Spass.gl.COLOR_ATTACHMENT0,  Spass.gl.TEXTURE_2D, this._fragColorTexture , 0)
+        Spass.gl.framebufferTexture2D( Spass.gl.FRAMEBUFFER,  Spass.gl.COLOR_ATTACHMENT1,  Spass.gl.TEXTURE_2D, this._solidColorTexture, 0)
+        Spass.gl.framebufferRenderbuffer( Spass.gl.FRAMEBUFFER,  Spass.gl.DEPTH_ATTACHMENT,  Spass.gl.RENDERBUFFER, this._renderbuffer)
+        Spass.gl.drawBuffers([  Spass.gl.COLOR_ATTACHMENT0,  Spass.gl.COLOR_ATTACHMENT1 ])
+        Spass.gl.bindFramebuffer( Spass.gl.FRAMEBUFFER, null)
+
+        this._quad = createQuad()
+
+        Spass.gl.bindVertexArray(this._quad._id)
+        let positionLoc  = Spass.gl.getAttribLocation(this._quad._material.program, "a_position")
+        let quadBuf = Spass.gl.createBuffer()
+        Spass.gl.bindBuffer(Spass.gl.ARRAY_BUFFER, quadBuf)
+        Spass.gl.bufferData(Spass.gl.ARRAY_BUFFER, new Float32Array(this._geometry.vertex), Spass.gl.STATIC_DRAW)
+        Spass.gl.vertexAttribPointer(positionLoc, this._geometry.vertexLen, Spass.gl.FLOAT, false, 0, 0)
+        Spass.gl.enableVertexAttribArray(positionLoc)
+
+        let uvLoc  = Spass.gl.getAttribLocation(this._material.program, "a_uv")
+        let uvBuf = Spass.gl.createBuffer()
+        Spass.gl.bindBuffer(Spass.gl.ARRAY_BUFFER, uvBuf)
+        Spass.gl.bufferData(Spass.gl.ARRAY_BUFFER, new Float32Array(this._geometry.uv), Spass.gl.STATIC_DRAW)
+        Spass.gl.vertexAttribPointer(uvLoc, 2, Spass.gl.FLOAT, false, 0, 0)
+        Spass.gl.enableVertexAttribArray(uvLoc)
+
+        Spass.gl.bindBuffer(Spass.gl.ARRAY_BUFFER, null)
+        Spass.gl.bindVertexArray(null)
+
+    }
+
     setUniform(name, type, value){
         if(!this._uniforms.hasOwnProperty(name)){
             let loc = Spass.gl.getUniformLocation(this._material.program, name)
@@ -86,7 +168,7 @@ export default class Mesh {
         }
     }
 
-    setImage(name, img){
+    setTexture(name, img){
         const texture =  Spass.gl.createTexture()
         Spass.gl.bindTexture( Spass.gl.TEXTURE_2D, texture)
         Spass.gl.texImage2D(Spass.gl.TEXTURE_2D, 0, Spass.gl.RGBA, Spass.gl.RGBA, Spass.gl.UNSIGNED_BYTE, img)
@@ -99,18 +181,6 @@ export default class Mesh {
             loc: Spass.gl.getUniformLocation(this._material.program, name),
             tex: texture
         }
-        Spass.gl.bindTexture( Spass.gl.TEXTURE_2D, null)
-
-    }
-
-    setTexture(name, texture){
-        Spass.gl.bindTexture(Spass.gl.TEXTURE_2D, texture)
-        // Spass.gl.generateMipmap( Spass.gl.TEXTURE_2D)
-        this._textures[name] = {
-            loc: Spass.gl.getUniformLocation(this._material.program, name),
-            tex: texture
-        }
-        Spass.gl.bindTexture( Spass.gl.TEXTURE_2D, null)
     }
 
     setPosition(x, y, z){
@@ -132,14 +202,12 @@ export default class Mesh {
 
         // Spass.gl.enable(Spass.gl.CULL_FACE)
         // Spass.gl.enable(Spass.gl.BLEND)
+        Spass.gl.enable(Spass.gl.DEPTH_TEST)
 
         // 处理 uniform
-        if(OUtil.isNotBlank(viewMatrix) && OUtil.isNotBlank(projectionMatrix)){
-            this.setUniform("uModelViewMatrix", "mat4",  new Float32Array(this._transfrom.value))
-            this.setUniform("uCameraViewMatrix", "mat4", new Float32Array(viewMatrix))
-            this.setUniform("uProjectViewMatrix", "mat4", new Float32Array(projectionMatrix))
-        }
-
+        this.setUniform("uModelViewMatrix", "mat4",  new Float32Array(this._transfrom.value))
+        this.setUniform("uCameraViewMatrix", "mat4", new Float32Array(viewMatrix))
+        this.setUniform("uProjectViewMatrix", "mat4", new Float32Array(projectionMatrix))
         Object.values(this._uniforms).forEach(value => {
             this._setUniform(value)
         })
@@ -153,13 +221,31 @@ export default class Mesh {
             Spass.gl.uniform1i(value.loc, i)
         })
 
+        // Spass.gl.bindFramebuffer( Spass.gl.FRAMEBUFFER, this._fbo)
+        // Spass.gl.clear( Spass.gl.COLOR_BUFFER_BIT |  Spass.gl.DEPTH_BUFFER_BIT)
+
         if(OUtil.isNotBlank(this._geometry.indexCount)){
             Spass.gl.drawElements(this._geometry.mode, this._geometry.indexCount, Spass.gl.UNSIGNED_SHORT, 0)
         }else{
             Spass.gl.drawArrays(this._geometry.mode, 0, this._geometry.vertexCount)
         }
 
+        Spass.gl.bindFramebuffer( Spass.gl.FRAMEBUFFER, null)
+        Spass.gl.disable( Spass.gl.DEPTH_TEST)
         Spass.gl.bindVertexArray(null)
         Spass.gl.useProgram(null)
+
+        // FBO
+        // Spass.gl.useProgram(this._quad._material.program)
+        // Spass.gl.bindVertexArray(this._quad._id)
+        // this._quad.setTexture("uTex", this._solidColorTexture)
+        // Spass.gl.drawArrays(this._quad._geometry.mode, 0, this._quad._geometry.vertexCount)
+        // Spass.gl.bindVertexArray(null)
+        // Spass.gl.useProgram(null)
+
+        this._quad.setTexture("uTex", this._solidColorTexture)
+        this._quad.draw()
+
+
     }
 }

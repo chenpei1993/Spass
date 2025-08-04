@@ -6,16 +6,16 @@
 </head>
 <body>
 <canvas id = "my-canvas"></canvas>
-<img id = "my-uv" style="display: none" src="./img/uv.jpg"></img>
+<img id = "my-uv" style="display: none" src="../../img/uv.jpg"></img>
 <script type="module">
-    import Camera from "./js/Camera/Camera.js";
-    import OrbitCameraController from "./js/Camera/OrbitCameraController.js";
-    import Shader from "./js/Material/Shader.js";
-    import Mesh from "./js/Mesh/Mesh.js";
-    import Spass from "./js/Core/Spass.js";
-    import GridShader from "./js/Material/GridShader.js";
-    import {GridFloor} from "./js/Geometry/GridFloor.js";
-    import {Quad} from "./js/Geometry/Quad.js";
+    import Camera from "../../js/Camera/Camera.js";
+    import OrbitCameraController from "../../js/Camera/OrbitCameraController.js";
+    import Shader from "../../js/Material/Shader.js";
+    import Mesh from "../../js/Mesh/Mesh.js";
+    import Spass from "../../js/Core/Spass.js";
+    import GridShader from "../../js/Material/GridShader.js";
+    import {GridFloor} from "../../js/Geometry/GridFloor.js";
+    import {Quad} from "../../js/Geometry/Quad.js";
 
     const canvasEle = document.getElementById("my-canvas")
     canvasEle.width = window.innerWidth
@@ -64,7 +64,7 @@
     const shader = new Shader(vertexShaderSrc, fragmentShaderSrc)
     let quad = new Quad()
     let quadMesh = new Mesh(quad, shader)
-    quadMesh.setTexture("uTex", img)
+    quadMesh.setImage("uTex", img)
     app.scene.add(quadMesh)
 
     // let geometry = new Grid(3, 3, -0.5, -0.5)
