@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Water</title>
+    <title>ColorCube</title>
 </head>
 <body>
   <canvas id = "my-canvas"></canvas>
@@ -15,8 +15,6 @@
     import {Cube, FacedCube} from "./js/Geometry/Cube.js";
     import GridShader from "./js/Material/GridShader.js";
     import {GridFloor} from "./js/Geometry/GridFloor.js";
-    import FeedBackMesh from "./js/Mesh/FeedBackMesh.js";
-    import FeedbackShader from "./js/Material/FeedbackShader.js";
 
     const canvasEle = document.getElementById("my-canvas")
     canvasEle.width = window.innerWidth
@@ -29,32 +27,32 @@
     app.setCamera(camera)
 
     let controller = new OrbitCameraController(camera, canvasEle)
-    // out vec4 color;
 
     let vertexShaderSrc = `#version 300 es
-      layout(location = 0) in vec4 a_position;
-
-
+      in vec4 a_position;
+      in vec2 a_uv;
       uniform vec3 uColors[6];
       uniform mat4 uModelViewMatrix;
       uniform mat4 uCameraViewMatrix;
       uniform mat4 uProjectViewMatrix;
-
+      out vec4 color;
+      out highp vec2 tex;
       void main(void){
-
         gl_Position =   uProjectViewMatrix  * uCameraViewMatrix * uModelViewMatrix * vec4(a_position.xyz, 1.0);
-        gl_PointSize = 4.0;
-        // color = vec4(uColors[int(a_position.w)], 1.0);
+        // gl_Position =  uModelViewMatrix * vec4(a_position.xyz, 1.0);
+        gl_PointSize = 20.0;
+        tex = a_uv;
+        // color = vec4(1.0, 0.0, 0.0, 1.0);
+        color = vec4(uColors[int(a_position.w)], 1.0);
       }
     `
-    // in vec4 color;
     let fragmentShaderSrc =  `#version 300 es
       precision mediump float;
-
-      in vec2 v_uv;
+      in vec4 color;
+      in vec2 tex;
       out vec4 fragColor;
       void main(void){
-        fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        fragColor = color;
       }
     `
 
@@ -64,27 +62,29 @@
     let gridMesh = new Mesh(gridFloor, gridShader)
     app.scene.add(gridMesh)
 
-
     const shader = new Shader(vertexShaderSrc, fragmentShaderSrc)
+
     let cube = new FacedCube(0.0, 0.0, 0.0)
-    cube.mode = Spass.gl.POINTS
-    cube.uv = []
     let cubeMesh = new Mesh(cube, shader)
     cubeMesh.setUniform("uColors", "vec3", new Float32Array([1.0,0.0,0.0,  0.0,1.0,0.0, 0.0,0.0,1.0, 1.0,1.0,0.0,  0.0,1.0,1.0, 0.3,0.3,0.3]))
     app.scene.add(cubeMesh)
 
+    // let cube = new FacedCube(0.0, 0.0, 0.0)
+    // app.scene.add(cubeMesh)
+
     // let geometry = new Quad(3, 3, -0.5, -0.5)
 
-    app.render()
     // app.render()
-    // app.render()
-    // function onRender(){
-    //     // mesh.rotateX(Math.PI * 0.02)
-    //     app.render()
-    //     window.requestAnimationFrame(onRender)
-    // }
+    function onRender(){
+        // mesh.rotateX(Math.PI * 0.02)
+        app.render()
+        // for(let i = 0; i < list.length; i++){
+        //     list[i].rotateY(0.01)
+        // }
+        window.requestAnimationFrame(onRender)
+    }
 
-    // window.requestAnimationFrame(onRender)
+    window.requestAnimationFrame(onRender)
 
 
   </script>
