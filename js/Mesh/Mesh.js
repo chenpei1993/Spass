@@ -8,6 +8,7 @@ export default class Mesh {
         this._material = material
         this._transfrom = new Matrix4()
         this._uniforms = {}
+        this._textures = {}
         this.init()
     }
 
@@ -59,6 +60,7 @@ export default class Mesh {
         if(!this._uniforms.hasOwnProperty(name)){
             let loc = Spass.gl.getUniformLocation(this._material.program, name)
             this._uniforms[name] = {
+                name: name,
                 location: loc,
                 type: type,
                 value: value
@@ -69,7 +71,6 @@ export default class Mesh {
     }
 
     _setUniform(obj){
-
         switch (obj.type){
             case "vec3":
                 Spass.gl.uniform3fv(obj.location, obj.value)
@@ -82,6 +83,21 @@ export default class Mesh {
                 break
             default:
                 console.error("obj.type not found ", obj)
+        }
+    }
+
+    setTexture(name, img){
+        const texture =  Spass.gl.createTexture()
+        Spass.gl.bindTexture( Spass.gl.TEXTURE_2D, texture)
+        Spass.gl.texImage2D(Spass.gl.TEXTURE_2D, 0, Spass.gl.RGBA, Spass.gl.RGBA, Spass.gl.UNSIGNED_BYTE, img)
+        Spass.gl.texParameteri( Spass.gl.TEXTURE_2D,  Spass.gl.TEXTURE_WRAP_S,  Spass.gl.CLAMP_TO_EDGE)
+        Spass.gl.texParameteri( Spass.gl.TEXTURE_2D,  Spass.gl.TEXTURE_WRAP_T,  Spass.gl.CLAMP_TO_EDGE)
+        Spass.gl.texParameteri( Spass.gl.TEXTURE_2D,  Spass.gl.TEXTURE_MIN_FILTER,  Spass.gl.LINEAR)
+        Spass.gl.texParameteri( Spass.gl.TEXTURE_2D,  Spass.gl.TEXTURE_MAG_FILTER,  Spass.gl.LINEAR)
+        // Spass.gl.generateMipmap( Spass.gl.TEXTURE_2D)
+        this._textures[name] = {
+            loc: Spass.gl.getUniformLocation(this._material.program, name),
+            tex: texture
         }
     }
 
@@ -102,15 +118,26 @@ export default class Mesh {
         Spass.gl.useProgram(this._material.program)
         Spass.gl.bindVertexArray(this._id)
 
-        Spass.gl.enable(Spass.gl.CULL_FACE)
+        // Spass.gl.enable(Spass.gl.CULL_FACE)
         // Spass.gl.enable(Spass.gl.BLEND)
 
+        // 处理 uniform
         this.setUniform("uModelViewMatrix", "mat4",  new Float32Array(this._transfrom.value))
         this.setUniform("uCameraViewMatrix", "mat4", new Float32Array(viewMatrix))
         this.setUniform("uProjectViewMatrix", "mat4", new Float32Array(projectionMatrix))
         Object.values(this._uniforms).forEach(value => {
             this._setUniform(value)
         })
+
+        // 处理纹理
+        let i = 0
+        Object.values(this._textures).forEach(value => {
+            let texSlot = Spass.gl["TEXTURE" + i]
+            Spass.gl.activeTexture(texSlot)
+            Spass.gl.bindTexture( Spass.gl.TEXTURE_2D, value.tex)
+            Spass.gl.uniform1i(value.loc, i)
+        })
+
         if(OUtil.isNotBlank(this._geometry.indexCount)){
             Spass.gl.drawElements(this._geometry.mode, this._geometry.indexCount, Spass.gl.UNSIGNED_SHORT, 0)
         }else{

@@ -1,4 +1,3 @@
-import Transform from "../Transform.js";
 import {Matrix4, Vector3} from "../Math.js";
 
 export default class Camera{

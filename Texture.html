@@ -2,21 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Quad</title>
+    <title>Texture</title>
 </head>
 <body>
 <canvas id = "my-canvas"></canvas>
+<img id = "my-uv" style="display: none" src="./img/uv.jpg"></img>
 <script type="module">
-    import Camera from "../../js/Camera/Camera.js";
-    import OrbitCameraController from "../../js/Camera/OrbitCameraController.js";
-    import Shader from "../../js/Material/Shader.js";
-    import Mesh from "../../js/Mesh/Mesh.js";
-    import Spass from "../../js/Core/Spass.js";
-    import {Cube} from "../../js/Geometry/Cube.js";
-    import GridShader from "../../js/Material/GridShader.js";
-    import {GridFloor} from "../../js/Geometry/GridFloor.js";
-    import {Grid} from "../../js/Geometry/Grid.js";
-    import {Quad} from "../../js/Geometry/Quad.js";
+    import Camera from "./js/Camera/Camera.js";
+    import OrbitCameraController from "./js/Camera/OrbitCameraController.js";
+    import Shader from "./js/Material/Shader.js";
+    import Mesh from "./js/Mesh/Mesh.js";
+    import Spass from "./js/Core/Spass.js";
+    import GridShader from "./js/Material/GridShader.js";
+    import {GridFloor} from "./js/Geometry/GridFloor.js";
+    import {Quad} from "./js/Geometry/Quad.js";
 
     const canvasEle = document.getElementById("my-canvas")
     canvasEle.width = window.innerWidth
@@ -25,7 +24,7 @@
     const app = new Spass(gl)
 
     let camera = new Camera(canvasEle.width / canvasEle.height)
-    camera.position(0, 0, 50)
+    camera.position(0, 0, 5)
     app.setCamera(camera)
 
     let controller = new OrbitCameraController(camera, canvasEle)
@@ -46,10 +45,11 @@
     `
     let fragmentShaderSrc =  `#version 300 es
       precision mediump float;
+      uniform sampler2D uTex;
       in vec2 uv;
       out vec4 fragColor;
       void main(void){
-        fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        fragColor = texture(uTex, vec2(uv.s, uv.t));
       }
      `
 
@@ -60,9 +60,11 @@
     app.scene.add(gridMesh)
 
 
+    let img = document.getElementById("my-uv")
     const shader = new Shader(vertexShaderSrc, fragmentShaderSrc)
     let quad = new Quad()
     let quadMesh = new Mesh(quad, shader)
+    quadMesh.setTexture("uTex", img)
     app.scene.add(quadMesh)
 
     // let geometry = new Grid(3, 3, -0.5, -0.5)
