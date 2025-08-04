@@ -130,7 +130,7 @@ export default class Mesh {
         Spass.gl.useProgram(this._material.program)
         Spass.gl.bindVertexArray(this._id)
 
-        // Spass.gl.enable(Spass.gl.CULL_FACE)
+        Spass.gl.enable(Spass.gl.CULL_FACE)
         // Spass.gl.enable(Spass.gl.BLEND)
 
         // 处理 uniform
