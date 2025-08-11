@@ -9,6 +9,10 @@ export class Vector3{
         return new Float32Array([this.x,this.y,this.z])
     }
 
+    getArray(){
+        return [this.x,this.y,this.z]
+    }
+
     set(x, y, z){
         this.x = x
         this.y = y

@@ -120,11 +120,14 @@
       in vec3 v_norm;
 
       uniform vec3 uLightPos;
+      uniform vec3 uCameraPos;
+
 
       out vec4 outColor;
       void main(void){
-        vec4 cBase = vec4(0.0, 0.0, 1.0, 0.3);
-        vec3 cLight = vec3(1.0,1.0,1.0);
+
+        vec3 cLight = vec3(1.0, 1.0, 1.0);
+
 
         //环境光
         float ambientStrength = 0.15;
@@ -139,9 +142,28 @@
         vec3 cDiffuse = diffAngle * cLight * diffuseStrength;
 
         //镜面光
+        // 归一化向量
+        float shininess = 0.5;
+        vec3 k_spec = vec3(0.1, 0.1, 0.1);
+        vec3 N = normalize(v_norm);
+        vec3 L = normalize(uLightPos - v_position);
+        vec3 V = normalize(uCameraPos - v_position);
+
+        // 计算反射向量
+        vec3 R = reflect(-L, N);
+
+        // 计算镜面光
+        float spec = pow(max(dot(R, V), 0.0), shininess);
+        vec3 cSpecular = k_spec * spec;
+
+        float h = v_position.y;
+
+        vec4 cBase = vec4(0.0, 0.75, 1.0, 0.5);
+        vec4 cBlue = vec4(0.0, 0.0, 1.0, 0.5);
+        vec4 color = mix(cBase, cBlue, 0.3 + h);
 
         // vec3 finalColor = (cAmbient + cDiffuse + cSpecular) * cBase.rgb;
-        vec3 finalColor = (cAmbient + cDiffuse) * cBase.rgb;
+        vec3 finalColor = (cAmbient + cDiffuse + cSpecular) * color.rgb;
         outColor = vec4(finalColor, 1.0);
       }
     `
@@ -154,12 +176,13 @@
 
 
     const shader = new Shader(vertexShaderSrc, fragmentShaderSrc)
-    let cube = new Grid(64, 64, -32,-32, 1, 1)
-    let cubeMesh = new Mesh(cube, shader)
-    cubeMesh.setPosition(0, 1, 0)
-    cubeMesh.setUniform("uTime", "float", 1)
-    cubeMesh.setUniform("uLightPos", "vec3", [2.0, 2.0, 0.0])
-    app.scene.add(cubeMesh)
+    let cube = new Grid(32, 32, -16,-16, 1, 1)
+    let waterMesh = new Mesh(cube, shader)
+    waterMesh.setPosition(0, 1, 0)
+    waterMesh.setUniform("uTime", "float", 1)
+    waterMesh.setUniform("uLightPos", "vec3", [0.0, 10.0, 0.0])
+    waterMesh.setUniform("uCameraPos", "vec3", camera.getPosition().getArray())
+    app.scene.add(waterMesh)
 
 
     let start = Date.now()
@@ -168,7 +191,8 @@
         app.render()
         let t = (Date.now() - start) / 1000;
         setTimeout(() => {
-            cubeMesh.setUniform("uTime", "float", t)
+            waterMesh.setUniform("uTime", "float", t)
+            waterMesh.setUniform("uCameraPos", "vec3", camera.getPosition().getArray())
         }, 1000)
         window.requestAnimationFrame(onRender)
     }

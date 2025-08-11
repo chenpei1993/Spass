@@ -26,6 +26,10 @@ export default class Camera{
         this._position.set(x,  y,  z)
     }
 
+    getPosition(){
+        return this._position;
+    }
+
     updateViewMatrix(){
         this._transform.reset()
 
