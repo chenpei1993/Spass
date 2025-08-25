@@ -38,13 +38,6 @@ export default class Spass {
         this._postRender = postRender
     }
 
-    set preItemRender(preItemRender){
-        this._preItemRender = preItemRender
-    }
-
-    set postItemRender(postItemRender){
-        this._postItemRender= postItemRender
-    }
 
     render(){
         Spass.gl.clearColor(1, 1, 1, 1)
@@ -55,12 +48,15 @@ export default class Spass {
         }
         for(let i = 0; i < this._scene.list.length; i++){
             let geometry = this._scene.list[i]
-            if(this._preItemRender){
-                this._preItemRender(geometry)
+
+            if(geometry.preRender){
+                geometry.preRender()
             }
+
             geometry.draw(this.camera.view, this.camera.projection)
-            if(this._postItemRender){
-                this._postItemRender(geometry)
+
+            if(geometry.postRender){
+                geometry.postRender()
             }
         }
 
