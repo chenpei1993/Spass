@@ -36,19 +36,19 @@ function createQuad(){
 
 export default class FrameBuffer{
 
-    constructor(width, height, quad) {
+    constructor(width, height, quad, loc) {
         this._width = width
         this._height = height
 
-        this.init()
         this._quad = quad || createQuad()
-
+        this._loc = loc || Spass.gl.COLOR_ATTACHMENT0
+        this.init()
     }
 
     init(){
         this._id = Spass.gl.createFramebuffer();
         Spass.gl.bindFramebuffer(Spass.gl.FRAMEBUFFER, this._id)
-        this.texColorBuffer(Spass.gl.COLOR_ATTACHMENT0)
+        this.texColorBuffer(this._loc)
         this.depthBuffer()
         this.finalize()
     }

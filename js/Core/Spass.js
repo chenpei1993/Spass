@@ -38,9 +38,19 @@ export default class Spass {
         this._postRender = postRender
     }
 
+    set backGroundColor(arr){
+        this._backGroundColor = arr
+    }
 
     render(){
-        Spass.gl.clearColor(1, 1, 1, 1)
+        if(this._backGroundColor){
+            Spass.gl.clearColor(this._backGroundColor[0],
+                this._backGroundColor[1],
+                this._backGroundColor[2],
+                this._backGroundColor[3])
+        }else{
+            Spass.gl.clearColor(1, 1, 1, 1)
+        }
         Spass.gl.clear(  Spass.gl.COLOR_BUFFER_BIT |   Spass.gl.DEPTH_BUFFER_BIT)
 
         if(this._preRender){
