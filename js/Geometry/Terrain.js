@@ -1,7 +1,7 @@
 import Spass from "../Core/Spass.js";
 import Noise from "../Util/NoiseUtil.js";
 
-export class Terrain {
+export default class Terrain {
     constructor(w, h, rLen, cLen) {
         this.createGeometry(w, h, rLen, cLen)
     }
@@ -40,7 +40,7 @@ export class Terrain {
             th = noise.perlin2((cRow+1)/freq, (cCol+1)/freq) * maxHeight;
 
             //Create Vertices,x,y,z
-            this.vertex.push(cStart+cCol*cInc, 0.2 + th, rStart+cRow*rInc);
+            this.vertex.push(cStart+cCol*cInc, 1 + th, rStart+cRow*rInc);
 
             //Create UV s,t. Spread the 0,0 to 1,1 throughout the whole plane
             this.uv.push( (cCol === cLen-1) ? 1 : cCol * uvxInc,

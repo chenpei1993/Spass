@@ -167,6 +167,7 @@ export default class Mesh {
             Spass.gl.activeTexture(texSlot)
             Spass.gl.bindTexture( Spass.gl.TEXTURE_2D, value.tex)
             Spass.gl.uniform1i(value.loc, i)
+            i++;
         })
 
         if(OUtil.isNotBlank(this._geometry.indexCount)){

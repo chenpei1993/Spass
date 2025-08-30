@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Water</title>
+</head>
+<body>
+
+<canvas id = "my-canvas"></canvas>
+
+<script type="module">
+    import Camera from "../../js/Camera/Camera.js";
+    import OrbitCameraController from "../../js/Camera/OrbitCameraController.js";
+    import Shader from "../../js/Material/Shader.js";
+    import Mesh from "../../js/Mesh/Mesh.js";
+    import Spass from "../../js/Core/Spass.js";
+    import GridShader from "../../js/Material/GridShader.js";
+    import {GridFloor} from "../../js/Geometry/GridFloor.js";
+    import {createTerrain, createQuad} from "./Util.js";
+    import {Quad} from "../../js/Geometry/Quad.js";
+    import {Grid} from "../../js/Geometry/Grid.js";
+    import FrameBuffer from "../../js/Core/FrameBuffer.js";
+
+    const canvasEle = document.getElementById("my-canvas")
+    canvasEle.width = window.innerWidth
+    canvasEle.height = window.innerHeight
+    const gl = canvasEle.getContext("webgl2", { antialias: true })
+    const app = new Spass(gl)
+    app.backGroundColor = [0, 0, 0, 1]
+
+    let camera = new Camera(canvasEle.width / canvasEle.height)
+    camera.position(0, 5, 15)
+    app.setCamera(camera)
+
+    let controller = new OrbitCameraController(camera, canvasEle)
+
+    let sunVertexShaderSrc = `#version 300 es
+      in vec4 a_position;
+      in vec2 a_uv;
+      uniform mat4 uModelViewMatrix;
+      uniform mat4 uCameraViewMatrix;
+      uniform mat4 uProjectViewMatrix;
+      out vec2 uv;
+      out vec4 modelPosition;
+      void main(void){
+        modelPosition = uModelViewMatrix * vec4(a_position.xyz, 1.0);
+        gl_Position =   uProjectViewMatrix  * uCameraViewMatrix * modelPosition;
+        // gl_Position =  uModelViewMatrix * vec4(a_position.xyz, 1.0);
+        uv = a_uv;
+
+      }
+    `
+    let sunFragmentShaderSrc =  `#version 300 es
+      precision mediump float;
+      in vec2 uv;
+      out vec4 fragColor;
+      uniform vec4 plane;
+      in vec4 modelPosition;
+
+      void main(void){
+         if(dot(modelPosition, plane) < 0.0){
+            discard;
+        }
+
+        vec3 circleColor = vec3(1.0, 0.0, 0.0);
+        vec3 backgroundColor = vec3(1.0, 1.0, 1.0);
+        vec2 center = vec2(0.5, 0.5);
+        float radius = 0.5;
+        float dist = distance(uv, center);
+        float smoothingWidth = 0.005;
+        float alpha = 1.0 - smoothstep(radius - smoothingWidth, radius, dist);
+
+        //vec3 mixedColor = mix(backgroundColor, circleColor, alpha);
+
+        fragColor = vec4(circleColor, alpha);
+
+      }
+     `
+
+
+    const sunShader = new Shader(sunVertexShaderSrc, sunFragmentShaderSrc)
+    let quad = new Quad()
+    let sunMesh = new Mesh(quad, sunShader)
+
+    sunMesh.preRender = () => {
+        Spass.gl.enable(Spass.gl.BLEND)
+        Spass.gl.blendFunc(Spass.gl.SRC_ALPHA, Spass.gl.ONE_MINUS_SRC_ALPHA)
+        Spass.gl.enable(Spass.gl.CULL_FACE)
+    }
+    sunMesh.postRender = () => {
+        Spass.gl.disable(Spass.gl.BLEND)
+        Spass.gl.enable(Spass.gl.CULL_FACE)
+    }
+    app.scene.add(sunMesh)
+
+    let terrainMesh = createTerrain()
+    app.scene.add(terrainMesh)
+
+
+    let vertexShaderSrc = `#version 300 es
+      in vec4 a_position;
+      in vec3 a_norm;
+      in vec2 a_uv;
+
+      uniform mat4 uModelViewMatrix;
+      uniform mat4 uCameraViewMatrix;
+      uniform mat4 uProjectViewMatrix;
+      uniform float uTime;
+
+      out vec3 v_norm;
+      out vec4 modelPosition;
+      out vec2 textureCoords;
+
+      void main(void){
+        modelPosition = uModelViewMatrix * vec4(a_position.xyz, 1.0);
+        gl_Position =   uProjectViewMatrix  * uCameraViewMatrix * modelPosition;
+        v_norm = a_norm;
+        textureCoords = a_uv;
+      }
+    `
+    let fragmentShaderSrc =  `#version 300 es
+      precision mediump float;
+      in vec4 modelPosition;
+      in vec3 v_norm;
+      in vec2 textureCoords;
+
+      // uniform vec4 plane;
+      uniform sampler2D reflectionTexture;
+      uniform sampler2D refractionTexture;
+
+      out vec4 outColor;
+
+      void main(void){
+        // if(dot(modelPosition, plane) < 0.0){
+        //     discard;
+        // }
+        // vec2 flipped_uv = vec2(textureCoords.x, 1.0 - textureCoords.y);
+         vec4 reflectColor = texture(reflectionTexture, textureCoords);
+        vec4 refractColor = texture(refractionTexture, textureCoords);
+        outColor = mix(reflectColor, refractColor, 0.5);
+        outColor = mix(vec4(0.0, 0.0, 1.0, 1.0),refractColor, 0.5);
+        // outColor = vec4(0.0, 0.0, 1.0, 1.0);
+      }
+    `
+
+
+    // const gridShader = new GridShader()
+    // let gridFloor = new GridFloor()
+    // let gridMesh = new Mesh(gridFloor, gridShader)
+    // app.scene.add(gridMesh)
+
+
+    let sunPosition = [0.0, 20.0, -30.0]
+    sunMesh.setPositionArray(sunPosition)
+
+
+    const shader = new Shader(vertexShaderSrc, fragmentShaderSrc)
+    let cube = new Grid(64, 64, -32,-32, 1, 1)
+    let waterMesh = new Mesh(cube, shader)
+    waterMesh.setPosition(0, 0.5, 0)
+    // app.scene.add(waterMesh)
+
+
+    let reflectFBO = new FrameBuffer(canvasEle.width, canvasEle.height)
+    let refractFBO = new FrameBuffer(canvasEle.width, canvasEle.height)
+
+    let quad1 = createQuad();
+
+    let start = Date.now()
+    function onRender(){
+
+        //水面上的
+        app.preRender = () => {
+            reflectFBO.clear()
+            reflectFBO.enable()
+            Spass.gl.enable(Spass.gl.DEPTH_TEST)
+            terrainMesh.setUniform("plane", "vec4", [0.0, 1.0, 0.0, -0.5])
+            sunMesh.setUniform("plane", "vec4", [0.0, 1.0, 0.0, -0.5])
+        }
+        app.postRender = ()=>{
+            Spass.gl.disable(Spass.gl.DEPTH_TEST)
+            reflectFBO.disable()
+            // reflectFBO._quad.setTexture("uTex", reflectFBO.texColor)
+            // reflectFBO._quad.draw()
+        }
+        app.render()
+
+
+
+        //水面下的
+        app.preRender = () => {
+            refractFBO.clear()
+            refractFBO.enable()
+            Spass.gl.enable(Spass.gl.DEPTH_TEST)
+            terrainMesh.setUniform("plane", "vec4", [0.0, -1.0, 0.0, 0.5])
+            sunMesh.setUniform("plane", "vec4", [0.0, -1.0, 0.0, 0.5])
+        }
+        app.postRender = ()=>{
+            Spass.gl.disable(Spass.gl.DEPTH_TEST)
+            refractFBO.disable()
+            refractFBO._quad.setTexture("uTex", refractFBO.texColor)
+            refractFBO._quad.draw()
+        }
+        app.render()
+
+
+        //输出到屏幕上
+        app.preRender = () => {
+            Spass.gl.enable(Spass.gl.DEPTH_TEST)
+            terrainMesh.setUniform("plane", "vec4", [0.0, 1.0, 0.0, 10000])
+            sunMesh.setUniform("plane", "vec4", [0.0, 1.0, 0.0, 10000])
+            waterMesh.setTexture("reflectionTexture", reflectFBO.texColor)
+            waterMesh.setTexture("refractionTexture", refractFBO.texColor)
+            waterMesh.draw(camera.view, camera.projection)
+        }
+        app.postRender = ()=>{
+            Spass.gl.disable(Spass.gl.DEPTH_TEST)
+        }
+
+        app.render()
+
+
+        // waterMesh.setTexture("reflectionTexture", reflectFBO.texColor)
+        // waterMesh.setTexture("refractionTexture", refractFBO.texColor)
+        // waterMesh.draw(camera.view, camera.projection)
+
+
+        window.requestAnimationFrame(onRender)
+    }
+
+    window.requestAnimationFrame(onRender)
+
+
+</script>
+</body>
+</html>
