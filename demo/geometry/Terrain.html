@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Terrain</title>
+</head>
+<body>
+<canvas id = "my-canvas"></canvas>
+<script type="module">
+    import Camera from "../../js/Camera/Camera.js";
+    import OrbitCameraController from "../../js/Camera/OrbitCameraController.js";
+    import Shader from "../../js/Material/Shader.js";
+    import Mesh from "../../js/Mesh/Mesh.js";
+    import Spass from "../../js/Core/Spass.js";
+    import GridShader from "../../js/Material/GridShader.js";
+    import {GridFloor} from "../../js/Geometry/GridFloor.js";
+    import {Terrain} from "../../js/Geometry/Terrain.js";
+
+    const canvasEle = document.getElementById("my-canvas")
+    canvasEle.width = window.innerWidth
+    canvasEle.height = window.innerHeight
+    const gl = canvasEle.getContext("webgl2")
+    const app = new Spass(gl)
+
+    let camera = new Camera(canvasEle.width / canvasEle.height)
+    camera.position(0, 0, 50)
+    app.setCamera(camera)
+
+    let controller = new OrbitCameraController(camera, canvasEle)
+
+    let vertexShaderSrc = `#version 300 es
+      in vec4 a_position;
+      in vec2 a_uv;
+      uniform mat4 uModelViewMatrix;
+      uniform mat4 uCameraViewMatrix;
+      uniform mat4 uProjectViewMatrix;
+      out vec2 uv;
+      void main(void){
+        gl_Position =   uProjectViewMatrix  * uCameraViewMatrix * uModelViewMatrix * vec4(a_position.xyz, 1.0);
+        uv = a_uv;
+
+      }
+    `
+    let fragmentShaderSrc =  `#version 300 es
+      precision mediump float;
+      in vec2 uv;
+      out vec4 fragColor;
+      void main(void){
+        fragColor = vec4(0.0, 1.0, 0.0, 1.0);
+      }
+     `
+
+
+    const gridShader = new GridShader()
+    let gridFloor = new GridFloor()
+    let gridMesh = new Mesh(gridFloor, gridShader)
+    app.scene.add(gridMesh)
+
+
+    const shader = new Shader(vertexShaderSrc, fragmentShaderSrc)
+    let terrain = new Terrain(20, 20, 20, 20)
+    let terrainMesh = new Mesh(terrain, shader)
+    app.scene.add(terrainMesh)
+
+    // let geometry = new Grid(3, 3, -0.5, -0.5)
+
+    // app.render()
+    function onRender(){
+        // mesh.rotateX(Math.PI * 0.02)
+        app.render()
+        window.requestAnimationFrame(onRender)
+    }
+
+    window.requestAnimationFrame(onRender)
+
+
+</script>
+</body>
+</html>

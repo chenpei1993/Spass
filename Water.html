@@ -12,7 +12,7 @@
     import Shader from "./js/Material/Shader.js";
     import Mesh from "./js/Mesh/Mesh.js";
     import Spass from "./js/Core/Spass.js";
-    import {Cube} from "./js/Geometry/Cube.js";
+    import {Quad} from "./js/Geometry/Quad.js";
     import GridShader from "./js/Material/GridShader.js";
     import {GridFloor} from "./js/Geometry/GridFloor.js";
     import {Grid} from "./js/Geometry/Grid.js";
@@ -28,6 +28,57 @@
     app.setCamera(camera)
 
     let controller = new OrbitCameraController(camera, canvasEle)
+
+    let sunVertexShaderSrc = `#version 300 es
+      in vec4 a_position;
+      in vec2 a_uv;
+      uniform mat4 uModelViewMatrix;
+      uniform mat4 uCameraViewMatrix;
+      uniform mat4 uProjectViewMatrix;
+      out vec2 uv;
+      void main(void){
+        gl_Position =   uProjectViewMatrix  * uCameraViewMatrix * uModelViewMatrix * vec4(a_position.xyz, 1.0);
+        // gl_Position =  uModelViewMatrix * vec4(a_position.xyz, 1.0);
+        uv = a_uv;
+
+      }
+    `
+    let sunFragmentShaderSrc =  `#version 300 es
+      precision mediump float;
+      in vec2 uv;
+      out vec4 fragColor;
+
+      void main(void){
+        vec3 circleColor = vec3(1.0, 0.0, 0.0);
+        vec3 backgroundColor = vec3(1.0, 1.0, 1.0);
+        vec2 center = vec2(0.5, 0.5);
+        float radius = 0.5;
+        float dist = distance(uv, center);
+        float smoothingWidth = 0.005;
+        float alpha = 1.0 - smoothstep(radius - smoothingWidth, radius, dist);
+
+        //vec3 mixedColor = mix(backgroundColor, circleColor, alpha);
+
+        fragColor = vec4(circleColor, alpha);
+
+      }
+     `
+
+
+    const sunShader = new Shader(sunVertexShaderSrc, sunFragmentShaderSrc)
+    let quad = new Quad()
+    let sunMesh = new Mesh(quad, sunShader)
+
+    sunMesh.preRender = () => {
+        Spass.gl.enable(Spass.gl.BLEND)
+        Spass.gl.blendFunc(Spass.gl.SRC_ALPHA, Spass.gl.ONE_MINUS_SRC_ALPHA)
+        Spass.gl.enable(Spass.gl.CULL_FACE)
+    }
+    sunMesh.postRender = () => {
+        Spass.gl.disable(Spass.gl.BLEND)
+        // Spass.gl.enable(Spass.gl.CULL_FACE)
+    }
+    app.scene.add(sunMesh)
 
     let vertexShaderSrc = `#version 300 es
       in vec4 a_position;
@@ -175,12 +226,14 @@
     app.scene.add(gridMesh)
 
 
+    let sunPosition = [0.0, 20.0, -30.0]
     const shader = new Shader(vertexShaderSrc, fragmentShaderSrc)
     let cube = new Grid(32, 32, -16,-16, 1, 1)
     let waterMesh = new Mesh(cube, shader)
+    sunMesh.setPositionArray(sunPosition)
     waterMesh.setPosition(0, 1, 0)
     waterMesh.setUniform("uTime", "float", 1)
-    waterMesh.setUniform("uLightPos", "vec3", [0.0, 10.0, 0.0])
+    waterMesh.setUniform("uLightPos", "vec3", sunPosition)
     waterMesh.setUniform("uCameraPos", "vec3", camera.getPosition().getArray())
     app.scene.add(waterMesh)
 
@@ -194,6 +247,11 @@
             waterMesh.setUniform("uTime", "float", t)
             waterMesh.setUniform("uCameraPos", "vec3", camera.getPosition().getArray())
         }, 1000)
+
+        // sunPosition[0] += t * 0.001
+        // console.log(sunPosition)
+        // sunMesh.setPositionArray(sunPosition)
+        // waterMesh.setUniform("uLightPos", "vec3", sunPosition)
         window.requestAnimationFrame(onRender)
     }
 

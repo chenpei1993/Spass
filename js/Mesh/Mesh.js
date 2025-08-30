@@ -129,6 +129,10 @@ export default class Mesh {
         Matrix4.translate(this._transfrom.value, x, y, z)
     }
 
+    setPositionArray(arr){
+        Matrix4.translate(this._transfrom.value, arr[0], arr[1], arr[2])
+    }
+
     rotateX(rad){
         Matrix4.rotateX(this._transfrom.value, rad)
     }
