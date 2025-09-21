@@ -69,9 +69,7 @@
         float dist = distance(uv, center);
         float smoothingWidth = 0.005;
         float alpha = 1.0 - smoothstep(radius - smoothingWidth, radius, dist);
-
         //vec3 mixedColor = mix(backgroundColor, circleColor, alpha);
-
         fragColor = vec4(circleColor, alpha);
 
       }
@@ -99,50 +97,33 @@
 
     let vertexShaderSrc = `#version 300 es
       in vec4 a_position;
-      in vec3 a_norm;
       in vec2 a_uv;
 
-      uniform mat4 uModelViewMatrix;
-      uniform mat4 uCameraViewMatrix;
-      uniform mat4 uProjectViewMatrix;
-      uniform float uTime;
-
-      out vec3 v_norm;
-      out vec4 modelPosition;
-      out vec2 textureCoords;
-
+      out vec2 uv;
       void main(void){
-        modelPosition = uModelViewMatrix * vec4(a_position.xyz, 1.0);
-        gl_Position =   uProjectViewMatrix  * uCameraViewMatrix * modelPosition;
-        v_norm = a_norm;
-        textureCoords = a_uv;
+        gl_Position =  a_position;
+        uv = a_uv;
       }
     `
     let fragmentShaderSrc =  `#version 300 es
       precision mediump float;
-      in vec4 modelPosition;
-      in vec3 v_norm;
-      in vec2 textureCoords;
-
-      // uniform vec4 plane;
-      uniform sampler2D reflectionTexture;
       uniform sampler2D refractionTexture;
-
-      out vec4 outColor;
-
+      uniform sampler2D reflectionTexture;
+      in vec2 uv;
+      out vec4 fragColor;
       void main(void){
-        // if(dot(modelPosition, plane) < 0.0){
-        //     discard;
-        // }
-        // vec2 flipped_uv = vec2(textureCoords.x, 1.0 - textureCoords.y);
-         vec4 reflectColor = texture(reflectionTexture, textureCoords);
-        vec4 refractColor = texture(refractionTexture, textureCoords);
-        outColor = mix(reflectColor, refractColor, 0.5);
-        outColor = mix(vec4(0.0, 0.0, 1.0, 1.0),refractColor, 0.5);
-        // outColor = vec4(0.0, 0.0, 1.0, 1.0);
-      }
-    `
+         vec2 flipped_uv = vec2(uv.x, 1.0 - uv.y);
+         vec4 reflectColor = texture(reflectionTexture, flipped_uv); // 水面上的东西
+         vec4 refractColor = texture(refractionTexture, flipped_uv); // 水面下的东西
+         vec4 black = vec4(0.0, 0.0, 0.0, 1.0);
+         if(refractColor == black){
+            fragColor = reflectColor;
+         }else{
+            fragColor = mix(vec4(0.0, 0.0, 1.0, 1.0), refractColor, 0.5);
+         }
 
+      }
+     `
 
     // const gridShader = new GridShader()
     // let gridFloor = new GridFloor()
@@ -155,11 +136,7 @@
 
 
     const shader = new Shader(vertexShaderSrc, fragmentShaderSrc)
-    let cube = new Grid(64, 64, -32,-32, 1, 1)
-    let waterMesh = new Mesh(cube, shader)
-    waterMesh.setPosition(0, 0.5, 0)
-    // app.scene.add(waterMesh)
-
+    let showMesh = new Mesh(new Quad(), shader)
 
     let reflectFBO = new FrameBuffer(canvasEle.width, canvasEle.height)
     let refractFBO = new FrameBuffer(canvasEle.width, canvasEle.height)
@@ -198,33 +175,32 @@
         app.postRender = ()=>{
             Spass.gl.disable(Spass.gl.DEPTH_TEST)
             refractFBO.disable()
-            refractFBO._quad.setTexture("uTex", refractFBO.texColor)
-            refractFBO._quad.draw()
+            // refractFBO._quad.setTexture("uTex", refractFBO.texColor)
+            // refractFBO._quad.draw()
         }
         app.render()
 
 
         //输出到屏幕上
-        app.preRender = () => {
-            Spass.gl.enable(Spass.gl.DEPTH_TEST)
-            terrainMesh.setUniform("plane", "vec4", [0.0, 1.0, 0.0, 10000])
-            sunMesh.setUniform("plane", "vec4", [0.0, 1.0, 0.0, 10000])
-            waterMesh.setTexture("reflectionTexture", reflectFBO.texColor)
-            waterMesh.setTexture("refractionTexture", refractFBO.texColor)
-            waterMesh.draw(camera.view, camera.projection)
-        }
-        app.postRender = ()=>{
-            Spass.gl.disable(Spass.gl.DEPTH_TEST)
-        }
+        // app.preRender = () => {
+        //     Spass.gl.enable(Spass.gl.DEPTH_TEST)
+        //     // terrainMesh.setUniform("plane", "vec4", [0.0, 1.0, 0.0, 10000])
+        //     // sunMesh.setUniform("plane", "vec4", [0.0, 1.0, 0.0, 10000])
+        //     // waterMesh.setTexture("reflectionTexture", reflectFBO.texColor)
+        //     // waterMesh.setTexture("refractionTexture", refractFBO.texColor)
+        // }
+        // app.postRender = ()=>{
+        //     Spass.gl.disable(Spass.gl.DEPTH_TEST)
+        // }
+        //
+        // app.render()
 
-        app.render()
+        showMesh.setTexture("reflectionTexture", reflectFBO.texColor)
+        showMesh.setTexture("refractionTexture", refractFBO.texColor)
+        showMesh.draw(camera.view, camera.projection)
 
-
-        // waterMesh.setTexture("reflectionTexture", reflectFBO.texColor)
-        // waterMesh.setTexture("refractionTexture", refractFBO.texColor)
-        // waterMesh.draw(camera.view, camera.projection)
-
-
+        // refractFBO._quad.setTexture("uTex", refractFBO.texColor)
+        // refractFBO._quad.draw()
         window.requestAnimationFrame(onRender)
     }
 

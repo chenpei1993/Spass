@@ -22,7 +22,8 @@ function createQuad(){
       in vec2 uv;
       out vec4 fragColor;
       void main(void){
-         fragColor = texture(uTex, uv);
+         vec2 flipped_uv = vec2(uv.x, 1.0 - uv.y);
+         fragColor = texture(uTex, flipped_uv);
          // fragColor = vec4(1.0, 0.0, 0.0, 1.0);
       }
      `
